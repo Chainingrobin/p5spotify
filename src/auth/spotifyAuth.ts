@@ -89,40 +89,36 @@
   }
 
   // Handle redirect back from Spotify (/callback) - exchanges code for tokens
-  export async function handleSpotifyCallback(): Promise<string | null> {
-    const url = new URL(window.location.href);
-    const error = url.searchParams.get("error");
-    if (error) {
-      console.error("Spotify auth error:", error);
-      // remove query params to clean URL
-      window.history.replaceState({}, document.title, url.pathname);
-      return null;
-    }
-
-    const code = url.searchParams.get("code");
-    if (!code) return null;
-
-    // Clean the URL (remove query params)
+export async function handleSpotifyCallback(): Promise<string | null> {
+  const url = new URL(window.location.href);
+  const error = url.searchParams.get("error");
+  if (error) {
+    console.error("Spotify auth error:", error);
     window.history.replaceState({}, document.title, url.pathname);
+    return null;
+  }
 
-    const verifier = sessionStorage.getItem(VERIFIER_KEY);
-    if (!verifier) {
-      console.error("PKCE verifier not found in sessionStorage.");
-      return null;
-    }
+  const code = url.searchParams.get("code");
+  if (!code) return null;
 
-    const body = new URLSearchParams({
-      client_id: CLIENT_ID,
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: REDIRECT_URI,
-      code_verifier: verifier,
-    });
+  // Clean URL
+  window.history.replaceState({}, document.title, url.pathname);
 
-    const res = await fetch("https://accounts.spotify.com/api/token", {
+  const verifier = sessionStorage.getItem(VERIFIER_KEY);
+  if (!verifier) {
+    console.error("PKCE verifier not found in sessionStorage.");
+    return null;
+  }
+
+  try {
+    const res = await fetch("/api/spotify-token", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: body.toString(),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        redirectUri: REDIRECT_URI,
+        codeVerifier: verifier,
+      }),
     });
 
     if (!res.ok) {
@@ -133,11 +129,15 @@
     const tokens = (await res.json()) as Tokens;
     const data = { ...tokens, obtained_at: Date.now() };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    // remove verifier after exchange (optional cleanup)
     sessionStorage.removeItem(VERIFIER_KEY);
 
     return tokens.access_token;
+  } catch (e) {
+    console.error("Error exchanging code:", e);
+    return null;
   }
+}
+
 
   /* ---------- Token helpers ---------- */
 
