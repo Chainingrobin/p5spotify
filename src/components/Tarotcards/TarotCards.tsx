@@ -1,4 +1,3 @@
-// Removed redundant fetch from PlaylistModal — now handled here only ✅
 import React, { useEffect, useState } from "react";
 import Tarotstyle from "./TarotCards.module.css";
 import { tarotCards, imagetexts, confidants, tarotPlaylists } from "assets";
@@ -30,7 +29,10 @@ export const TarotLayout: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [profilePic, setProfilePic] = useState<string | null>(null); // ✅ store user profile picture
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+
+  // Time range for top songs
+  const [timeRange, setTimeRange] = useState<"short_term" | "medium_term" | "long_term">("medium_term");
 
   // Get Spotify token
   useEffect(() => {
@@ -46,7 +48,7 @@ export const TarotLayout: React.FC = () => {
     })();
   }, []);
 
-  // Fetch profile pic once ✅
+  // Fetch profile pic once
   useEffect(() => {
     if (!accessToken) return;
     (async () => {
@@ -65,16 +67,48 @@ export const TarotLayout: React.FC = () => {
     })();
   }, [accessToken]);
 
-  // ✅ Single click handler for both normal cards and Fool card
-  const handleCardClick = async (cardKey: string) => {
-    if (cardKey === "fool") {
+  // Fetch top songs for the Fool card
+  const fetchTopSongs = async (range: "short_term" | "medium_term" | "long_term") => {
+    if (!accessToken) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(
+        `https://api.spotify.com/v1/me/top/tracks?limit=40&time_range=${range}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch top tracks: ${res.status}`);
+      }
+
+      const data = await res.json();
+
       setPlaylist({
         name: "Your Top Songs",
         image: profilePic,
         isTopSongs: true,
-        tracks: [],
+        tracks: data.items.map((track: any) => ({
+          name: track.name,
+          artist: track.artists.map((a: any) => a.name).join(", "),
+          albumCover: track.album.images?.[0]?.url || null,
+          spotifyUri: track.uri,
+        })),
       });
+    } catch (err: any) {
+      setError(err.message || "Failed to load top songs.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Single click handler
+  const handleCardClick = async (cardKey: string) => {
+    if (cardKey === "fool") {
       setIsModalOpen(true);
+      await fetchTopSongs(timeRange);
       return;
     }
 
@@ -131,18 +165,17 @@ export const TarotLayout: React.FC = () => {
 
   return (
     <>
-      <div className ={Tarotstyle.spotifycontainer}>
+      <div className={Tarotstyle.spotifycontainer}>
         {!accessToken ? (
-          <button className ={Tarotstyle.spotifybtn} onClick={startSpotifyLogin}>
+          <button className={Tarotstyle.spotifybtn} onClick={startSpotifyLogin}>
             Login with Spotify
           </button>
         ) : (
-          <button className ={Tarotstyle.spotifybtn}  onClick={handleLogout}>
+          <button className={Tarotstyle.spotifybtn} onClick={handleLogout}>
             Logout Spotify
           </button>
         )}
       </div>
-
 
       <div className={Tarotstyle.layout}>
         {/* LEFT */}
@@ -156,7 +189,7 @@ export const TarotLayout: React.FC = () => {
           )}
         </div>
 
-        {/* CENTER — Fool card now opens Top Songs modal */}
+        {/* CENTER — Fool card */}
         <div className={Tarotstyle.center}>
           <div
             className={`${Tarotstyle.cardContainer} ${Tarotstyle.foolCardstyle}`}
@@ -193,6 +226,23 @@ export const TarotLayout: React.FC = () => {
           loading={loading}
           accessToken={accessToken}
           playlist={playlist}
+          extraControls={
+            playlist?.isTopSongs ? (
+              <select
+                className="range-dropdown"
+                value={timeRange}
+                onChange={(e) => {
+                  const newRange = e.target.value as "short_term" | "medium_term" | "long_term";
+                  setTimeRange(newRange);
+                  fetchTopSongs(newRange);
+                }}
+              >
+                <option value="short_term">Last 4 Weeks</option>
+                <option value="medium_term">Last 6 Months</option>
+                <option value="long_term">All Time</option>
+              </select>
+            ) : null
+          }
         />
       )}
 

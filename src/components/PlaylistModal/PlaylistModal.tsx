@@ -43,6 +43,49 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [currentTrackUri, setCurrentTrackUri] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(true);
+  
+
+//check play or pause
+  useEffect(() => {
+  if (!player) return;
+  player.addListener("player_state_changed", (state) => {
+    if (!state) return;
+    setIsPaused(state.paused);
+    const currentTrack = state.track_window.current_track?.uri;
+    setCurrentTrackUri(currentTrack);
+  });
+}, [player]);
+
+const handlePlayPause = async (uri: string) => {
+  if (!player || !playerReady || !accessToken) return;
+
+  if (uri === currentTrackUri) {
+    // If same track, toggle pause/play
+    await player.togglePlay();
+  } else {
+    // If different track, start playing it
+    playUri(uri);
+    setCurrentTrackUri(uri);
+    setIsPaused(false);
+  }
+};
+
+//handle restart
+const restartTrack = async (uri: string) => {
+  if (!player || !playerReady || !accessToken) return;
+
+  if (uri === currentTrackUri) {
+    await player.seek(0); // restart current track
+  } else {
+    // If restarting a different track, just play from start
+    playUri(uri);
+    setCurrentTrackUri(uri);
+    setIsPaused(false);
+  }
+};
+
 
   // Fetch user profile image if top songs list
   useEffect(() => {
@@ -207,25 +250,34 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
             <div className="track-list">
               {playlist.tracks.map((track, index) => (
                 <div key={index} className="track-item">
-                  {track.albumCover && (
-                    <img
-                      src={track.albumCover}
-                      alt={track.name}
-                      className="track-cover"
-                    />
-                  )}
-                  <div className="track-info">
-                    <div className="track-name">{track.name}</div>
-                    <div className="track-artist">{track.artist}</div>
+                    {track.albumCover && (
+                      <img
+                        src={track.albumCover}
+                        alt={track.name}
+                        className="track-cover"
+                      />
+                    )}
+                    <div className="track-info">
+                      <div className="track-name">{track.name}</div>
+                      <div className="track-artist">{track.artist}</div>
+                    </div>
+                    <div className="track-controls">
+                      <button
+                        className="restart-btn"
+                        onClick={() => restartTrack(track.spotifyUri)}
+                        disabled={!playerReady || !accessToken}
+                      >
+                        ⟲
+                      </button>
+                      <button
+                        className="play-btn"
+                        onClick={() => handlePlayPause(track.spotifyUri)}
+                        disabled={!playerReady || !accessToken}
+                      >
+                        {currentTrackUri === track.spotifyUri && !isPaused ? "⏸" : "▶"}
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    className="play-btn"
-                    onClick={() => playUri(track.spotifyUri)}
-                    disabled={!playerReady || !accessToken}
-                  >
-                    ▶
-                  </button>
-                </div>
               ))}
             </div>
           </>
