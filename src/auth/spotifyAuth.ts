@@ -89,28 +89,37 @@
   }
 
   // Handle redirect back from Spotify (/callback) - exchanges code for tokens
+// src/auth/spotifyAuth.ts
 export async function handleSpotifyCallback(): Promise<string | null> {
+  console.log("[SpotifyAuth] Starting handleSpotifyCallback...");
+
   const url = new URL(window.location.href);
   const error = url.searchParams.get("error");
   if (error) {
-    console.error("Spotify auth error:", error);
+    console.error("[SpotifyAuth] Spotify auth error:", error);
     window.history.replaceState({}, document.title, url.pathname);
     return null;
   }
 
   const code = url.searchParams.get("code");
-  if (!code) return null;
+  if (!code) {
+    console.warn("[SpotifyAuth] No 'code' parameter found in callback URL.");
+    return null;
+  }
 
-  // Clean URL
+  // Clean the URL so code isn’t visible
   window.history.replaceState({}, document.title, url.pathname);
 
   const verifier = sessionStorage.getItem(VERIFIER_KEY);
+  console.log("[SpotifyAuth] PKCE verifier from sessionStorage:", verifier);
+
   if (!verifier) {
-    console.error("PKCE verifier not found in sessionStorage.");
+    console.error("[SpotifyAuth] PKCE verifier not found in sessionStorage — cannot exchange token.");
     return null;
   }
 
   try {
+    console.log("[SpotifyAuth] Sending token exchange request to /api/spotify-token...");
     const res = await fetch("/api/spotify-token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -121,22 +130,32 @@ export async function handleSpotifyCallback(): Promise<string | null> {
       }),
     });
 
+    console.log("[SpotifyAuth] Token exchange response status:", res.status);
+    const responseText = await res.text();
+    console.log("[SpotifyAuth] Raw token exchange response text:", responseText);
+
     if (!res.ok) {
-      console.error("Token exchange failed:", await res.text());
+      console.error("[SpotifyAuth] Token exchange failed with status", res.status);
       return null;
     }
 
-    const tokens = (await res.json()) as Tokens;
+    const tokens = JSON.parse(responseText) as Tokens;
+    console.log("[SpotifyAuth] Parsed token object:", tokens);
+
     const data = { ...tokens, obtained_at: Date.now() };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    console.log("[SpotifyAuth] Tokens stored in localStorage under key:", STORAGE_KEY);
+
     sessionStorage.removeItem(VERIFIER_KEY);
+    console.log("[SpotifyAuth] PKCE verifier removed from sessionStorage");
 
     return tokens.access_token;
   } catch (e) {
-    console.error("Error exchanging code:", e);
+    console.error("[SpotifyAuth] Error exchanging code:", e);
     return null;
   }
 }
+
 
 
   /* ---------- Token helpers ---------- */
