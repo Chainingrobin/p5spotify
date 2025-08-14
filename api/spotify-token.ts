@@ -8,7 +8,8 @@ export default async (req: VercelRequest, res: VercelResponse) => {
   }
 
   const { code, redirectUri, codeVerifier } = req.body;
-
+  console.log(code);
+  
   if (!code || !redirectUri || !codeVerifier) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
