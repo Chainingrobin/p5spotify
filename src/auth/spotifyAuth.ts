@@ -98,6 +98,8 @@ export async function handleSpotifyCallback(): Promise<string | null> {
   }
 
   const code = url.searchParams.get("code");
+  console.log(url);
+  
   if (!code) {
     console.warn("[SpotifyAuth] No code found in callback URL");
     return null;
