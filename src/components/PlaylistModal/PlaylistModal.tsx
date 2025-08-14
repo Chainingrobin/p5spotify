@@ -1,7 +1,7 @@
 /// <reference types="spotify-web-playback-sdk" />
 
 import React, { useEffect, useState } from "react";
-import "./playlistModal.css";
+import "./PlaylistModal.css";
 
 // ---- GLOBAL DECLARATIONS FOR SPOTIFY SDK ----
 declare global {
