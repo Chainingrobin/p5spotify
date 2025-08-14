@@ -1,3 +1,4 @@
+// Removed redundant fetch from PlaylistModal — now handled here only ✅
 import React, { useEffect, useState } from "react";
 import Tarotstyle from "./TarotCards.module.css";
 import { tarotCards, imagetexts, confidants, tarotPlaylists } from "assets";
@@ -29,8 +30,7 @@ export const TarotLayout: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [profilePic, setProfilePic] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<"short_term" | "medium_term" | "long_term">("short_term");
+  const [profilePic, setProfilePic] = useState<string | null>(null); // ✅ store user profile picture
 
   // Get Spotify token
   useEffect(() => {
@@ -46,7 +46,7 @@ export const TarotLayout: React.FC = () => {
     })();
   }, []);
 
-  // Fetch profile pic once
+  // Fetch profile pic once ✅
   useEffect(() => {
     if (!accessToken) return;
     (async () => {
@@ -65,45 +65,15 @@ export const TarotLayout: React.FC = () => {
     })();
   }, [accessToken]);
 
-  // Fetch top songs
-  const fetchTopSongs = async (range: "short_term" | "medium_term" | "long_term") => {
-    if (!accessToken) return;
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch(
-        `https://api.spotify.com/v1/me/top/tracks?time_range=${range}&limit=20`,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
-      if (!res.ok) throw new Error("Failed to fetch top tracks");
-      const data = await res.json();
-
+  // ✅ Single click handler for both normal cards and Fool card
+  const handleCardClick = async (cardKey: string) => {
+    if (cardKey === "fool") {
       setPlaylist({
         name: "Your Top Songs",
         image: profilePic,
         isTopSongs: true,
-        tracks: data.items.map((track: any) => ({
-          name: track.name,
-          artist: track.artists.map((a: any) => a.name).join(", "),
-          albumCover: track.album.images?.[0]?.url || null,
-          spotifyUri: track.uri,
-        })),
+        tracks: [],
       });
-    } catch (err: any) {
-      console.error("Error fetching top songs:", err);
-      setError(err.message || "Failed to load top songs.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle card click
-  const handleCardClick = async (cardKey: string) => {
-    if (cardKey === "fool") {
-      await fetchTopSongs(timeRange);
       setIsModalOpen(true);
       return;
     }
@@ -161,13 +131,18 @@ export const TarotLayout: React.FC = () => {
 
   return (
     <>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+      <div className ={Tarotstyle.spotifycontainer}>
         {!accessToken ? (
-          <button onClick={startSpotifyLogin}>Login with Spotify</button>
+          <button className ={Tarotstyle.spotifybtn} onClick={startSpotifyLogin}>
+            Login with Spotify
+          </button>
         ) : (
-          <button onClick={handleLogout}>Logout Spotify</button>
+          <button className ={Tarotstyle.spotifybtn}  onClick={handleLogout}>
+            Logout Spotify
+          </button>
         )}
       </div>
+
 
       <div className={Tarotstyle.layout}>
         {/* LEFT */}
@@ -181,7 +156,7 @@ export const TarotLayout: React.FC = () => {
           )}
         </div>
 
-        {/* CENTER — Fool card */}
+        {/* CENTER — Fool card now opens Top Songs modal */}
         <div className={Tarotstyle.center}>
           <div
             className={`${Tarotstyle.cardContainer} ${Tarotstyle.foolCardstyle}`}
@@ -191,7 +166,7 @@ export const TarotLayout: React.FC = () => {
             <img
               src={profilePic || confidants[6]}
               alt="User Profile or Joker"
-              className={`${Tarotstyle.confidantImage} ${Tarotstyle.jokerimage} `}
+              className={`${Tarotstyle.confidantImage} ${Tarotstyle.jokerimage}`}
             />
             <img src={FoolCard} alt="Fool Card" className={Tarotstyle.tarotCard} />
           </div>
@@ -218,23 +193,6 @@ export const TarotLayout: React.FC = () => {
           loading={loading}
           accessToken={accessToken}
           playlist={playlist}
-          extraControls={
-            playlist?.isTopSongs && (
-              <select
-                value={timeRange}
-                onChange={(e) => {
-                  const newRange = e.target.value as "short_term" | "medium_term" | "long_term";
-                  setTimeRange(newRange);
-                  fetchTopSongs(newRange);
-                }}
-                style={{ marginBottom: "10px" }}
-              >
-                <option value="short_term">Last 4 Weeks</option>
-                <option value="medium_term">Last 6 Months</option>
-                <option value="long_term">All Time</option>
-              </select>
-            )
-          }
         />
       )}
 

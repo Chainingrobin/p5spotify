@@ -81,7 +81,6 @@
   will-change: transform;
   overflow: visible; 
   
-  
 }
 
 /* Tarot card image inside the slot */
@@ -93,11 +92,8 @@
   border-radius: 3px;
   max-width: 100%;
   object-fit: contain;
-  overflow: visible;
+  overflow: hidden;
   
-}
-.userPfp{
-  border-radius: 5px;
 }
 /* Confidant pfp positioned flush to the top of the card, behind it */
 .confidantImage {
@@ -133,9 +129,14 @@
   transform: translateX(-50%) translateY(-100px) scale(1.5) !important;
   z-index: 10;
   position: relative; /* needed for z-index */
-  transition: transform 0.5s ease;
-}
+  transition: transform 0.3s ease;
 
+}
+.confidantImage.confidantImage.jokerimage{
+  border-radius: 50%;
+  bottom: calc(100% + 6px);
+  overflow: hidden;
+}
 
 /* Fool card container - larger base size */
 .foolCardstyle {
@@ -180,4 +181,30 @@
   margin-right: 8px;
   color: #fff;
   font-size: 14px;
+}
+
+.spotifycontainer {
+  display: flex;
+  transform: translateY(-75px);
+  justify-content: flex-start; /* keep it to the left */
+  align-items: center;
+}
+
+.spotifybtn {
+  all: unset; /* remove all default styles */
+  display: inline-block;
+  background-color: #1DB954;
+  color: black;
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+.spotifybtn:hover {
+  background-color: #1ED760;
+  transform: scale(1.05);
 }
