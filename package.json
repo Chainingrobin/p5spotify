@@ -5,13 +5,12 @@
   "type": "module",
   "main": "dist/server.js",
   "homepage": "https://github.com/Chainingrobin/p5spotify",
-"scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "vite preview",
-  "lint": "eslint ."
-}
-,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint ."
+  },
   "dependencies": {
     "axios": "^1.11.0",
     "cors": "^2.8.5",
@@ -20,6 +19,7 @@
     "node-fetch": "^3.3.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-router-dom": "^7.8.0",
     "vercel": "^45.0.9"
   },
   "devDependencies": {
