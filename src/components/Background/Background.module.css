@@ -1,0 +1,25 @@
+:global(html, body) {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.backgroundContainer {
+  position: relative;
+  min-height: 100svh;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  filter: brightness(100%);
+}
+
+
+
+.content {
+  position: relative;
+  padding: 2rem; /* optional spacing */
+  color: white; /* default text color so it’s visible on bg */
+}

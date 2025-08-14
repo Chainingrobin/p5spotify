@@ -1,0 +1,183 @@
+/* container: constrained to left ~2/3 of screen */
+/* kept your margin-left:20px choice — layout is anchored left */
+.layout {
+  display: grid;
+  grid-template-columns: auto auto auto;             /* left | center | right */
+  grid-template-rows: min-content min-content min-content;
+  row-gap: 2rem;                                     /* more vertical breathing room */
+  column-gap: 2.5rem;                                /* more horizontal space around Fool */
+  align-items: start;
+  justify-content: flex-start;
+  padding: 4.5rem 28px 0 20px;                       /* top | right | bottom | left */
+  box-sizing: border-box;
+  width: 66%;                                        /* stays in left ~2/3 */
+  max-width: 1100px;
+  margin-left: 15px;                                 /* your manual offset */
+  overflow: visible;                                 /* allow scaled items to show without harsh cutoff */
+}
+
+/* Left & right columns: each column spans the 3 layout rows */
+.left {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 1.25rem;   /* horizontal gap between cards in the same row */
+  row-gap: 1.75rem;      /* vertical gap between top/middle/bottom cells */
+  justify-items: center;
+  align-items: start;
+}
+
+.right {
+  grid-column: 3;
+  grid-row: 1 / span 3;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 1.25rem;
+  row-gap: 1.75rem;
+  justify-items: center;
+  align-items: start;
+}
+
+/* Text images (middle row in left/right columns) — keep them reasonable */
+.textImagechoose,
+.textImagefate {
+  grid-column: span 3;
+  justify-self: center;
+  width: 220px;        /* fixed, predictable size */
+  max-width: 85%;
+  height: auto;
+  margin: 0.25rem 0;
+  transform: none;
+  z-index: 0;          /* keep behind cards */
+  transition: transform 0.2s ease;
+  padding-bottom: 10px;
+  margin-top: -20px;
+
+}
+
+.textImagefate {
+    transform: scale(1.2);
+
+}
+
+
+/* CENTER: Fool sits in middle row, centered in column */
+.center {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3;          /* ensure the Fool is above text images */
+}
+
+/* Card container for each tarot slot (wraps pfp & card) */
+.cardContainer {
+  position: relative;
+  width: 115px;        /* fixed slot width so grid stays stable */
+  display: block;
+  z-index: 1;          /* cards should appear above text images */
+  will-change: transform;
+  overflow: visible; 
+  
+  
+}
+
+/* Tarot card image inside the slot */
+.tarotCard {
+  width: 100%;         /* fills the cardContainer width (140px) */
+  height: auto;
+  display: block;
+  transition: transform 0.22s ease;
+  border-radius: 3px;
+  max-width: 100%;
+  object-fit: contain;
+  overflow: visible;
+  
+}
+.userPfp{
+  border-radius: 5px;
+}
+/* Confidant pfp positioned flush to the top of the card, behind it */
+.confidantImage {
+  position: absolute;
+  left: 4px;                        /* small inset from left edge */
+  bottom: calc(100% - 2px);         /* flush to the top of the card (2px overlap) */
+  width: 65px;                      /* default pfp size */
+  height: auto;
+  background: none;                 /* preserves PNG transparency */
+  border-radius: 0;
+  pointer-events: none;             /* so hover belongs to container */
+  transform-origin: bottom left;
+  transition: transform 0.22s ease;
+  z-index: -1;      
+  display: block;
+  max-width: 100%;
+  object-fit: contain;
+  overflow: visible;                
+}
+
+/* Hover: lift the card and nudge the pfp up slightly (transform only — no layout shift) */
+.cardContainer:hover .tarotCard {
+  transform: translateY(-6px) scale(1.1);
+}
+/* General hover for all confidant images */
+.cardContainer:hover .confidantImage {
+  transform: translateY(-20px) scale(1.03);
+  transition: transform 0.22s ease;
+}
+
+/* More specific hover for Joker inside Fool card */
+.foolCardstyle:hover .confidantImage.jokerimage {
+  transform: translateX(-50%) translateY(-100px) scale(1.5) !important;
+  z-index: 10;
+  position: relative; /* needed for z-index */
+  transition: transform 0.5s ease;
+}
+
+
+/* Fool card container - larger base size */
+.foolCardstyle {
+  width: 180px !important; /* larger than normal 140px */
+}
+
+/* Hover effect for Fool card container - bigger lift & scale */
+.foolCardstyle:hover .tarotCard {
+  transform: translateY(-8px) scale(1.4) !important;
+}
+
+/* (optional) If you have confidant image inside container */
+.foolCardstyle:hover .confidantImage {
+  transform: translateY(-12px) scale(1.08) !important;
+}
+
+
+.extraControls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin: 10px 0 20px 0;
+}
+
+.extraControls select {
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #181818; /* dark modal background */
+  color: #fff; /* white text */
+  outline: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.extraControls select:hover {
+  background: #282828;
+}
+
+.extraControls label {
+  margin-right: 8px;
+  color: #fff;
+  font-size: 14px;
+}
