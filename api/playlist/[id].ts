@@ -3,7 +3,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import axios from 'axios';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
@@ -14,29 +13,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Missing playlist ID' });
     }
 
-    const clientId = process.env.SPOTIFY_CLIENT_ID;
-    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+    const userAuth = req.headers.authorization; // From frontend
 
-    if (!clientId || !clientSecret) {
-      return res.status(500).json({ error: 'Missing Spotify API credentials' });
+    let token: string;
+
+    if (userAuth) {
+      // ✅ Use user token from frontend login
+      token = userAuth.replace("Bearer ", "");
+    } else {
+      // ❌ No user token — use app credentials
+      const clientId = process.env.SPOTIFY_CLIENT_ID;
+      const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+      if (!clientId || !clientSecret) {
+        return res.status(500).json({ error: 'Missing Spotify API credentials' });
+      }
+
+      const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+      const tokenResponse = await axios.post(
+        'https://accounts.spotify.com/api/token',
+        new URLSearchParams({ grant_type: 'client_credentials' }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Basic ${authHeader}`,
+          },
+        }
+      );
+
+      token = tokenResponse.data.access_token;
     }
 
-    // Step 1: Get app access token (Client Credentials Flow)
-    const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const tokenResponse = await axios.post(
-      'https://accounts.spotify.com/api/token',
-      new URLSearchParams({ grant_type: 'client_credentials' }),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${authHeader}`,
-        },
-      }
-    );
-
-    const token = tokenResponse.data.access_token;
-
-    // Step 2: Fetch playlist details
+    // Fetch playlist details
     const playlistResponse = await axios.get(
       `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}`,
       {

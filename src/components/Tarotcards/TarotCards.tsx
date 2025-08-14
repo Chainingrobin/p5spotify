@@ -122,7 +122,11 @@ export const TarotLayout: React.FC = () => {
     setError(null);
 
     try {
-      const data = await getPlaylist(playlistId);
+      const token = await getValidAccessToken();
+        if (!token) return;
+
+        const data = await getPlaylist(playlistId, token);
+
       if (!data?.tracks?.items?.length) {
         throw new Error("Playlist data is empty or invalid.");
       }
