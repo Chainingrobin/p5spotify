@@ -88,6 +88,8 @@ export async function startSpotifyLogin() {
 // Handle callback from Spotify → exchange code for tokens
 export async function handleSpotifyCallback(): Promise<string | null> {
   console.log("[SpotifyAuth] Callback started...");
+    
+
 
   const url = new URL(window.location.href);
   const error = url.searchParams.get("error");
@@ -99,6 +101,7 @@ export async function handleSpotifyCallback(): Promise<string | null> {
 
   const code = url.searchParams.get("code");
   console.log(url);
+  console.log("the code is" ,code);
   
   if (!code) {
     console.warn("[SpotifyAuth] No code found in callback URL");
