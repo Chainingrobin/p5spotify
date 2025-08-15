@@ -2,7 +2,7 @@
   "name": "p5spotify",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
+  "type": "commonjs",
   "main": "dist/server.js",
   "homepage": "https://github.com/Chainingrobin/p5spotify",
   "scripts": {
