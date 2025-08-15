@@ -11,14 +11,11 @@ export default defineConfig({
   plugins: [
     react(),
     svgr({
-  svgrOptions: {
-    icon: true,
-    // add more options here if needed
-  },
-}),
-  // plugin added here!
+      svgrOptions: {
+        icon: true
+      },
+    }),
   ],
-  
   resolve: {
     alias: {
       images: path.resolve(__dirname, 'src/assets/images'),
@@ -26,5 +23,8 @@ export default defineConfig({
       components: path.resolve(__dirname, 'src/components'),
     },
   },
-  
+  build: {
+    outDir: 'dist', // Ensures output matches Vercel's static dir
+    emptyOutDir: true
+  }
 });
