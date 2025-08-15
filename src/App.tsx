@@ -8,6 +8,8 @@ import { p5logopic } from "assets";
 import clickSound from "assets/fr.mp3";
 import "./App.css";
 import callingcard from "assets/images/imagetexts/callingcard.png";
+import Callbackvariable from "./pages/Callback";
+
 
 
 function Callback() {
@@ -71,7 +73,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/callback" element={<Callback />} />
+      <Route path="/callback" element={<Callbackvariable/>} />
     </Routes>
   );
 }
