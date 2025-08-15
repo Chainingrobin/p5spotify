@@ -1,4 +1,3 @@
-// api/spotify-token.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import fetch from 'node-fetch';
 
@@ -14,13 +13,17 @@ export default async (req: VercelRequest, res: VercelResponse) => {
   }
 
   try {
+    console.log("Env vars:", {
+      clientId: process.env.SPOTIFY_CLIENT_ID,
+      clientSecret: process.env.SPOTIFY_CLIENT_SECRET ? "set" : "missing",
+    });
+
     const body = new URLSearchParams({
       client_id: process.env.SPOTIFY_CLIENT_ID!,
       grant_type: 'authorization_code',
       code,
       redirect_uri: redirectUri,
       code_verifier: codeVerifier,
-      client_secret: process.env.SPOTIFY_CLIENT_SECRET!,
     });
 
     const r = await fetch('https://accounts.spotify.com/api/token', {
