@@ -1,28 +1,15 @@
 // src/App.tsx
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
-import { handleSpotifyCallback } from "./auth/spotifyAuth";
 import { TarotLayout } from "components/Tarotcards/TarotCards";
 import Background from "./components/Background/Background";
 import { p5logopic } from "assets";
 import clickSound from "assets/fr.mp3";
 import "./App.css";
 import callingcard from "assets/images/imagetexts/callingcard.png";
-import Callbackvariable from "./pages/Callback";
 
-
-
-function Callback() {
-  useEffect(() => {
-    handleSpotifyCallback().then((token) => {
-      console.log("Access token:", token);
-      // After finishing the login, go back to the main page
-      window.location.href = "/";
-    });
-  }, []);
-
-  return <p>Completing Spotify login...</p>;
-}
+// Import your actual callback page
+import CallbackPage from "./pages/Callback";
 
 function Home() {
   const [showModal, setShowModal] = useState(true);
@@ -34,25 +21,23 @@ function Home() {
 
   return (
     <Background>
-      <div>
-        {showModal && (
-          <div className="calling-card-overlay">
-            <div className="calling-card-modal">
-              <img
-                src={callingcard}
-                alt="Instructions"
-                className="calling-card-image"
-              />
-              <button
-                className="close-calling-card"
-                onClick={() => setShowModal(false)}
-              >
-                ✖
-              </button>
-            </div>
+      {showModal && (
+        <div className="calling-card-overlay">
+          <div className="calling-card-modal">
+            <img
+              src={callingcard}
+              alt="Instructions"
+              className="calling-card-image"
+            />
+            <button
+              className="close-calling-card"
+              onClick={() => setShowModal(false)}
+            >
+              ✖
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <header className="header">
         <img
@@ -73,7 +58,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/callback" element={<Callbackvariable/>} />
+      <Route path="/callback" element={<CallbackPage />} />
     </Routes>
   );
 }
