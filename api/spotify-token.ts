@@ -1,18 +1,15 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import fetch from 'node-fetch';
-
-export default async (req: VercelRequest, res: VercelResponse) => {
+export default async function handler(req: Request, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { code, redirectUri, codeVerifier } = req.body;
-
-  if (!code || !redirectUri || !codeVerifier) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
   try {
+    const { code, redirectUri, codeVerifier } = await req.json();
+
+    if (!code || !redirectUri || !codeVerifier) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
     console.log("Env vars:", {
       clientId: process.env.SPOTIFY_CLIENT_ID,
       clientSecret: process.env.SPOTIFY_CLIENT_SECRET ? "set" : "missing",
@@ -33,6 +30,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     });
 
     const data = await r.json();
+
     if (!r.ok) {
       console.error('Spotify token error:', data);
       return res.status(r.status).json(data);
@@ -43,4 +41,4 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     console.error('Server error exchanging Spotify code:', err);
     return res.status(500).json({ error: 'Server error' });
   }
-};
+}
