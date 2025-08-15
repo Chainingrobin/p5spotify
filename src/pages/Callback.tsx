@@ -10,7 +10,6 @@ export default function Callback() {
       const token = await handleSpotifyCallback();
       if (token) {
         console.log("Spotify access token stored:", token);
-        navigate("/"); // After login, send back to home page (or another page)
       } else {
         console.error("Spotify login failed.");
         navigate("/"); // Could send to an error page if you prefer
