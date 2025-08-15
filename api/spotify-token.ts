@@ -28,7 +28,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       code,
       redirect_uri: redirectUri,
       code_verifier: codeVerifier,
-      client_secret: process.env.SPOTIFY_CLIENT_SECRET ?? '',
     });
 
     const r = await fetch('https://accounts.spotify.com/api/token', {
