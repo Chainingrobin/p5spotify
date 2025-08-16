@@ -41,6 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!r.ok) {
       console.error('Spotify token error:', data);
       return res.status(r.status).json(data);
+      
     }
 
     return res.status(200).json(data);

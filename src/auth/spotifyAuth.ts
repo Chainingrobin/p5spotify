@@ -1,5 +1,7 @@
 // src/auth/spotifyAuth.ts
-// PKCE + Spotify OAuth helpers for Vite frontend
+// Spotify OAuth + PKCE frontend helpers (Vite)
+
+import { generateCodeVerifier, generateCodeChallenge } from "../pkceUtils";
 
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI;
@@ -11,7 +13,7 @@ const SCOPES = [
   "user-read-private",
   "user-read-playback-state",
   "user-modify-playback-state",
-  "app-remote-control"
+  "app-remote-control",
 ].join(" ");
 
 type Tokens = {
@@ -25,53 +27,23 @@ type Tokens = {
 const STORAGE_KEY = "spotify_tokens";
 const VERIFIER_KEY = "spotify_pkce_verifier";
 
-/* ---------- PKCE Helpers ---------- */
-
-// base64-url encode an ArrayBuffer
-function base64urlencode(buffer: ArrayBuffer) {
-  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-// sha256 digest → base64url
-async function sha256Base64url(input: string) {
-  const data = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return base64urlencode(digest);
-}
-
-// generate a random PKCE code verifier
-export function generateCodeVerifier(length = 96) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
-  let out = "";
-  const array = new Uint32Array(length);
-  crypto.getRandomValues(array);
-  for (let i = 0; i < length; i++) out += chars[array[i] % chars.length];
-  return out;
-}
-
-// generate PKCE challenge from verifier
-export async function generateCodeChallenge(verifier: string) {
-  return await sha256Base64url(verifier);
-}
-
 /* ---------- OAuth Actions ---------- */
 
-// Start login - saves verifier then redirects to Spotify
+// Step 1: Start login
 export async function startSpotifyLogin() {
   if (!CLIENT_ID || !REDIRECT_URI) {
     console.error("Missing VITE_SPOTIFY_CLIENT_ID or VITE_SPOTIFY_REDIRECT_URI");
     return;
   }
 
+  // Generate PKCE values using utils
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
 
-  // Store PKCE verifier (use localStorage to survive reloads)
+  // Save PKCE verifier locally
   localStorage.setItem(VERIFIER_KEY, verifier);
 
+  // Build Spotify auth URL
   const params = new URLSearchParams({
     response_type: "code",
     client_id: CLIENT_ID,
@@ -80,16 +52,15 @@ export async function startSpotifyLogin() {
     code_challenge_method: "S256",
     code_challenge: challenge,
     show_dialog: "true",
+    access_type: "offline", // ✅ ensure refresh_token is issued
   });
 
   window.location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
 
-// Handle callback from Spotify → exchange code for tokens
+// Step 2: Handle callback after login
 export async function handleSpotifyCallback(): Promise<string | null> {
   console.log("[SpotifyAuth] Callback started...");
-    
-
 
   const url = new URL(window.location.href);
   const error = url.searchParams.get("error");
@@ -100,9 +71,6 @@ export async function handleSpotifyCallback(): Promise<string | null> {
   }
 
   const code = url.searchParams.get("code");
-  console.log(url);
-  console.log("the code is" ,code);
-  
   if (!code) {
     console.warn("[SpotifyAuth] No code found in callback URL");
     return null;
@@ -112,13 +80,13 @@ export async function handleSpotifyCallback(): Promise<string | null> {
   window.history.replaceState({}, document.title, url.pathname);
 
   const verifier = localStorage.getItem(VERIFIER_KEY);
-  console.log("[SpotifyAuth] PKCE verifier from localStorage:", verifier);
   if (!verifier) {
     console.error("[SpotifyAuth] Missing PKCE verifier — cannot exchange token");
     return null;
   }
 
   try {
+    // Exchange code for tokens via backend
     const res = await fetch("/api/spotify-token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -130,8 +98,6 @@ export async function handleSpotifyCallback(): Promise<string | null> {
     });
 
     const rawText = await res.text();
-    console.log("[SpotifyAuth] Raw response:", rawText);
-
     if (!res.ok) {
       console.error("[SpotifyAuth] Token exchange failed", res.status, rawText);
       return null;
@@ -141,12 +107,15 @@ export async function handleSpotifyCallback(): Promise<string | null> {
     console.log("[SpotifyAuth] Parsed tokens:", tokens);
 
     // Save tokens with timestamp
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      ...tokens,
-      obtained_at: Date.now(),
-    }));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...tokens,
+        obtained_at: Date.now(),
+      })
+    );
 
-    // Remove verifier — no longer needed
+    // Remove verifier
     localStorage.removeItem(VERIFIER_KEY);
 
     return tokens.access_token;
@@ -158,12 +127,13 @@ export async function handleSpotifyCallback(): Promise<string | null> {
 
 /* ---------- Token Helpers ---------- */
 
+// Get access token if still valid
 export function getStoredAccessToken(): string | null {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   try {
     const data = JSON.parse(raw) as Tokens & { obtained_at: number };
-    const expiresAt = data.obtained_at + data.expires_in * 1000 - 30_000;
+    const expiresAt = data.obtained_at + data.expires_in * 1000 - 30_000; // 30s buffer
     if (Date.now() < expiresAt) return data.access_token;
     return null;
   } catch (e) {
@@ -172,44 +142,44 @@ export function getStoredAccessToken(): string | null {
   }
 }
 
+// Refresh token using backend API
 export async function refreshAccessToken(): Promise<string | null> {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   const stored = JSON.parse(raw) as Tokens & { obtained_at: number };
   if (!stored.refresh_token) return null;
 
-  const body = new URLSearchParams({
-    client_id: CLIENT_ID,
-    grant_type: "refresh_token",
-    refresh_token: stored.refresh_token,
-  });
+  try {
+    const res = await fetch(`/api/refresh-token?refresh_token=${stored.refresh_token}`);
+    if (!res.ok) {
+      console.error("Refresh failed:", await res.text());
+      return null;
+    }
 
-  const res = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
-
-  if (!res.ok) {
-    console.error("Refresh failed:", await res.text());
+    const tokens = (await res.json()) as Tokens;
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...stored,
+        ...tokens,
+        obtained_at: Date.now(),
+      })
+    );
+    return tokens.access_token;
+  } catch (err) {
+    console.error("Error refreshing access token:", err);
     return null;
   }
-
-  const tokens = (await res.json()) as Tokens;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    ...stored,
-    ...tokens,
-    obtained_at: Date.now(),
-  }));
-  return tokens.access_token;
 }
 
+// Always use this to get a valid token
 export async function getValidAccessToken(): Promise<string | null> {
   const stored = getStoredAccessToken();
   if (stored) return stored;
   return refreshAccessToken();
 }
 
+// Logout
 export function logoutSpotify() {
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(VERIFIER_KEY);
