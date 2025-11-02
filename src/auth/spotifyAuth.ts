@@ -32,7 +32,9 @@ const VERIFIER_KEY = "spotify_pkce_verifier";
 // Step 1: Start login
 export async function startSpotifyLogin() {
   if (!CLIENT_ID || !REDIRECT_URI) {
-    console.error("Missing VITE_SPOTIFY_CLIENT_ID or VITE_SPOTIFY_REDIRECT_URI");
+    console.error(
+      "Missing VITE_SPOTIFY_CLIENT_ID or VITE_SPOTIFY_REDIRECT_URI"
+    );
     return;
   }
 
@@ -81,21 +83,26 @@ export async function handleSpotifyCallback(): Promise<string | null> {
 
   const verifier = localStorage.getItem(VERIFIER_KEY);
   if (!verifier) {
-    console.error("[SpotifyAuth] Missing PKCE verifier — cannot exchange token");
+    console.error(
+      "[SpotifyAuth] Missing PKCE verifier — cannot exchange token"
+    );
     return null;
   }
 
   try {
     // Exchange code for tokens via backend
-    const res = await fetch("/api/spotify-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        code,
-        redirectUri: REDIRECT_URI,
-        codeVerifier: verifier,
-      }),
-    });
+    const res = await fetch(
+      "https://p5spotify-443y.vercel.app/api/spotify-token",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          redirectUri: REDIRECT_URI,
+          codeVerifier: verifier,
+        }),
+      }
+    );
 
     const rawText = await res.text();
     if (!res.ok) {
@@ -150,7 +157,9 @@ export async function refreshAccessToken(): Promise<string | null> {
   if (!stored.refresh_token) return null;
 
   try {
-    const res = await fetch(`/api/refresh-token?refresh_token=${stored.refresh_token}`);
+    const res = await fetch(
+      `/api/refresh-token?refresh_token=${stored.refresh_token}`
+    );
     if (!res.ok) {
       console.error("Refresh failed:", await res.text());
       return null;
