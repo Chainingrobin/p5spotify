@@ -3,8 +3,23 @@
 
 import { generateCodeVerifier, generateCodeChallenge } from "../pkceUtils";
 
+const STORAGE_KEY = "spotify_tokens";
+const VERIFIER_KEY = "spotify_pkce_verifier";
+
+const DEFAULT_ORIGIN =
+  typeof window !== "undefined" ? window.location.origin : "";
+
+const RAW_API_BASE =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
+
+const NORMALIZED_API_BASE = RAW_API_BASE.replace(/\/$/, "");
+
+const API_BASE_URL = NORMALIZED_API_BASE || DEFAULT_ORIGIN;
+
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
-const REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI;
+const REDIRECT_URI =
+  import.meta.env.VITE_SPOTIFY_REDIRECT_URI ??
+  (NORMALIZED_API_BASE ? `${NORMALIZED_API_BASE}/callback` : "");
 
 const SCOPES = [
   "user-top-read",
@@ -23,9 +38,6 @@ type Tokens = {
   expires_in: number; // seconds
   refresh_token?: string;
 };
-
-const STORAGE_KEY = "spotify_tokens";
-const VERIFIER_KEY = "spotify_pkce_verifier";
 
 /* ---------- OAuth Actions ---------- */
 
@@ -91,18 +103,15 @@ export async function handleSpotifyCallback(): Promise<string | null> {
 
   try {
     // Exchange code for tokens via backend
-    const res = await fetch(
-      "https://p5spotify-443y.vercel.app/api/spotify-token",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          redirectUri: REDIRECT_URI,
-          codeVerifier: verifier,
-        }),
-      }
-    );
+    const res = await fetch(`${API_BASE_URL}/api/spotify-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        redirectUri: REDIRECT_URI,
+        codeVerifier: verifier,
+      }),
+    });
 
     const rawText = await res.text();
     if (!res.ok) {
@@ -158,7 +167,9 @@ export async function refreshAccessToken(): Promise<string | null> {
 
   try {
     const res = await fetch(
-      `/api/refresh-token?refresh_token=${stored.refresh_token}`
+      `${API_BASE_URL}/api/refresh-token?refresh_token=${encodeURIComponent(
+        stored.refresh_token
+      )}`
     );
     if (!res.ok) {
       console.error("Refresh failed:", await res.text());
