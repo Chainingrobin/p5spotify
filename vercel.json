@@ -10,5 +10,10 @@
   "rewrites": [
     { "source": "/api/:match*", "destination": "/api/:match*" },
     { "source": "/:path*", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@3"
+    }
+  }
 }

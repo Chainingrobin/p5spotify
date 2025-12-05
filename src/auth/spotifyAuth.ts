@@ -19,7 +19,9 @@ const API_BASE_URL = NORMALIZED_API_BASE || DEFAULT_ORIGIN;
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const REDIRECT_URI =
   import.meta.env.VITE_SPOTIFY_REDIRECT_URI ??
-  (NORMALIZED_API_BASE ? `${NORMALIZED_API_BASE}/callback` : "");
+  (window.location.hostname === "localhost"
+    ? "http://localhost:5173/callback"
+    : `${API_BASE_URL}/callback`);
 
 const SCOPES = [
   "user-top-read",
