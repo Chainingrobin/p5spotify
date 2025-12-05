@@ -1,11 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { handleSpotifyCallback } from "../auth/spotifyAuth";
 
 export default function Callback() {
   const navigate = useNavigate();
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
     (async () => {
       const token = await handleSpotifyCallback();
       if (token) {

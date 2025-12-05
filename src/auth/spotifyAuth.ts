@@ -18,10 +18,7 @@ const API_BASE_URL = NORMALIZED_API_BASE || DEFAULT_ORIGIN;
 
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const REDIRECT_URI =
-  import.meta.env.VITE_SPOTIFY_REDIRECT_URI ??
-  (window.location.hostname === "localhost"
-    ? "http://localhost:5173/callback"
-    : `${API_BASE_URL}/callback`);
+  import.meta.env.VITE_SPOTIFY_REDIRECT_URI ?? "http://127.0.0.1:5173/callback";
 
 const SCOPES = [
   "user-top-read",
@@ -79,18 +76,57 @@ export async function handleSpotifyCallback(): Promise<string | null> {
   console.log("[SpotifyAuth] Callback started...");
 
   const url = new URL(window.location.href);
-  const error = url.searchParams.get("error");
+
+  // Check for errors in query params or hash
+  const error =
+    url.searchParams.get("error") ||
+    new URLSearchParams(url.hash.slice(1)).get("error");
   if (error) {
     console.error("[SpotifyAuth] Spotify auth error:", error);
     window.history.replaceState({}, document.title, url.pathname);
     return null;
   }
 
+  // Try to get tokens from hash (Implicit Grant)
+  const hashParams = new URLSearchParams(url.hash.slice(1));
+  const accessToken = hashParams.get("access_token");
+
+  if (accessToken) {
+    console.log("[SpotifyAuth] Using Implicit Grant flow (hash params)");
+
+    const tokens: Tokens = {
+      access_token: accessToken,
+      token_type: (hashParams.get("token_type") as "Bearer") || "Bearer",
+      scope: hashParams.get("scope") || SCOPES,
+      expires_in: parseInt(hashParams.get("expires_in") || "3600"),
+      refresh_token: hashParams.get("refresh_token") || undefined,
+    };
+
+    console.log("[SpotifyAuth] Parsed tokens:", tokens);
+
+    // Save tokens with timestamp
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...tokens,
+        obtained_at: Date.now(),
+      })
+    );
+
+    // Clean up URL - remove hash
+    window.history.replaceState({}, document.title, url.pathname);
+
+    return tokens.access_token;
+  }
+
+  // Try Authorization Code Flow (query params)
   const code = url.searchParams.get("code");
   if (!code) {
-    console.warn("[SpotifyAuth] No code found in callback URL");
+    console.warn("[SpotifyAuth] No token or code found in callback URL");
     return null;
   }
+
+  console.log("[SpotifyAuth] Using Authorization Code flow (query params)");
 
   // Remove code from URL
   window.history.replaceState({}, document.title, url.pathname);
