@@ -45,6 +45,8 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [currentTrackUri, setCurrentTrackUri] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(true);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   //check play or pause
   useEffect(() => {
@@ -54,8 +56,25 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
       setIsPaused(state.paused);
       const currentTrack = state.track_window.current_track?.uri;
       setCurrentTrackUri(currentTrack);
+      setPosition(state.position);
+      setDuration(state.duration);
     });
   }, [player]);
+
+  // Update position while playing
+  useEffect(() => {
+    if (!player || isPaused) return;
+
+    const interval = setInterval(() => {
+      player.getCurrentState().then((state) => {
+        if (state) {
+          setPosition(state.position);
+        }
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [player, isPaused]);
 
   const handlePlayPause = async (uri: string) => {
     if (!player || !playerReady || !accessToken) return;
@@ -83,6 +102,43 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
       setCurrentTrackUri(uri);
       setIsPaused(false);
     }
+  };
+
+  // Skip forward/backward by 10 seconds
+  const skipForward = async () => {
+    if (!player || !playerReady) return;
+    const state = await player.getCurrentState();
+    if (state) {
+      const newPosition = Math.min(state.position + 10000, state.duration);
+      await player.seek(newPosition);
+      setPosition(newPosition);
+    }
+  };
+
+  const skipBackward = async () => {
+    if (!player || !playerReady) return;
+    const state = await player.getCurrentState();
+    if (state) {
+      const newPosition = Math.max(state.position - 10000, 0);
+      await player.seek(newPosition);
+      setPosition(newPosition);
+    }
+  };
+
+  // Seek to specific position
+  const handleSeek = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!player || !playerReady) return;
+    const newPosition = parseInt(e.target.value);
+    await player.seek(newPosition);
+    setPosition(newPosition);
+  };
+
+  // Format time in mm:ss
+  const formatTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   // Fetch user profile image if top songs list
@@ -356,19 +412,66 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
                   <div className="track-info">
                     <div className="track-name">{track.name}</div>
                     <div className="track-artist">{track.artist}</div>
+
+                    {/* Progress bar - only show for currently playing track */}
+                    {currentTrackUri === track.spotifyUri && !isPaused && (
+                      <div className="progress-container">
+                        <span className="time-label">
+                          {formatTime(position)}
+                        </span>
+                        <input
+                          type="range"
+                          min="0"
+                          max={duration}
+                          value={position}
+                          onChange={handleSeek}
+                          className="progress-bar"
+                          disabled={!playerReady}
+                        />
+                        <span className="time-label">
+                          {formatTime(duration)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="track-controls">
                     <button
                       className="restart-btn"
                       onClick={() => restartTrack(track.spotifyUri)}
                       disabled={!playerReady || !accessToken}
+                      title="Restart"
                     >
                       ⟲
                     </button>
+                    {currentTrackUri === track.spotifyUri && (
+                      <>
+                        <button
+                          className="skip-btn"
+                          onClick={skipBackward}
+                          disabled={!playerReady || !accessToken}
+                          title="Skip back 10s"
+                        >
+                          ⏪
+                        </button>
+                        <button
+                          className="skip-btn"
+                          onClick={skipForward}
+                          disabled={!playerReady || !accessToken}
+                          title="Skip forward 10s"
+                        >
+                          ⏩
+                        </button>
+                      </>
+                    )}
                     <button
                       className="play-btn"
                       onClick={() => handlePlayPause(track.spotifyUri)}
                       disabled={!playerReady || !accessToken}
+                      title={
+                        currentTrackUri === track.spotifyUri && !isPaused
+                          ? "Pause"
+                          : "Play"
+                      }
                     >
                       {currentTrackUri === track.spotifyUri && !isPaused
                         ? "⏸"

@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import { TarotLayout } from "components/Tarotcards/TarotCards";
 import Background from "./components/Background/Background";
@@ -11,8 +11,24 @@ import callingcard from "assets/images/imagetexts/callingcard.png";
 // Import your actual callback page
 import CallbackPage from "./pages/Callback";
 
+const CALLING_CARD_KEY = "calling_card_seen";
+
 function Home() {
-  const [showModal, setShowModal] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    // Check if user has seen the calling card before
+    const hasSeenCard = localStorage.getItem(CALLING_CARD_KEY);
+    if (!hasSeenCard) {
+      setShowModal(true);
+    }
+  }, []);
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    // Mark as seen in localStorage
+    localStorage.setItem(CALLING_CARD_KEY, "true");
+  };
 
   const playSound = () => {
     const audio = new Audio(clickSound);
@@ -29,10 +45,7 @@ function Home() {
               alt="Instructions"
               className="calling-card-image"
             />
-            <button
-              className="close-calling-card"
-              onClick={() => setShowModal(false)}
-            >
+            <button className="close-calling-card" onClick={handleCloseModal}>
               ✖
             </button>
           </div>
